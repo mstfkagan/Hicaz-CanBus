@@ -1,0 +1,13 @@
+module your_module_name
+
+go 1.18
+
+require (
+    periph.io/x/periph v3.7.0+incompatible
+)
+
+replace (
+    periph.io/x/periph/conn/spi => periph.io/x/periph/conn/spi v3.7.0+incompatible
+    periph.io/x/periph/conn/spi/spireg => periph.io/x/periph/conn/spi/spireg v3.7.0+incompatible
+    periph.io/x/periph/host => periph.io/x/periph/host v3.7.0+incompatible
+)
