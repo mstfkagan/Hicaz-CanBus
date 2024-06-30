@@ -18,7 +18,7 @@ func main() {
 	spi := rpio.Spi0
 
 	// SPI iletişimini yapılandır
-	spi.Speed = 1000000 // SPI hızı: 1 MHz
+	spi.Speed = 500000 // SPI hızı: 1 MHz
 	spi.Mode = rpio.Mode0
 
 	// Arduino CS (Chip Select) pini
@@ -29,7 +29,7 @@ func main() {
 	arduinoCS.High()
 
 	// Gönderilecek veri
-	dataToSend := []byte{0x01, 0x02, 0x03, 0x04}
+	dataToSend := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07}
 
 	// Arduino'ya veri gönderme
 	arduinoCS.Low() // Slave seç
