@@ -1,41 +1,42 @@
 package main
 
 import (
-    "log"
-    "time"
+	"log"
+	"time"
 
-    "github.com/stianeikeland/go-rpio/v4"
+	"github.com/stianeikeland/go-rpio/v4"
 )
 
 func main() {
-    // Raspberry Pi'de SPI aygıtını aç
-    if err := rpio.Open(); err != nil {
-        log.Fatal(err)
-    }
-    defer rpio.Close()
+	// Raspberry Pi'de SPI aygıtını aç
+	if err := rpio.Open(); err != nil {
+		log.Fatal(err)
+	}
+	defer rpio.Close()
 
-    // SPI aygıtını ve modunu seçin
-    spi := rpio.Spi0
+	// SPI aygıtını seçin (Raspberry Pi 3 üzerinde SPI0)
+	spi := rpio.Spi0
 
-    // SPI modunu ve saat frekansını ayarla
-    if err := spi.Config(rpio.Spi0, rpio.Mode0, 1000000); err != nil { // SPI0, Mode0 (CPOL=0, CPHA=0), 1 MHz frekans
-        log.Fatal(err)
-    }
+	// SPI iletişimini yapılandır
+	spi.Speed = 1000000 // SPI hızı: 1 MHz
+	spi.Mode = rpio.Mode0
 
-    // Arduino SPI seçimi
-    var arduinoCS rpio.Pin = 10 // D10 pin
-    arduinoCS.Output()
-    arduinoCS.High() // Başlangıçta yüksek seviyede
+	// Arduino CS (Chip Select) pini
+	arduinoCS := rpio.Pin(10) // D10 pin
 
-    // Gönderilecek veri
-    dataToSend := []byte{0x01, 0x02, 0x03, 0x04}
+	// Arduino CS pini çıkış olarak ayarla ve başlangıçta yüksek seviyeye getir
+	arduinoCS.Output()
+	arduinoCS.High()
 
-    // Arduino'ya veri gönderme
-    arduinoCS.Low() // Slave seç
-    defer arduinoCS.High() // İşlem bitiminde tekrar yüksek seviyeye getir
+	// Gönderilecek veri
+	dataToSend := []byte{0x01, 0x02, 0x03, 0x04}
 
-    for _, data := range dataToSend {
-        spi.Transfer(uint8(data))
-        time.Sleep(10 * time.Millisecond) // Küçük bir bekleme süresi
-    }
+	// Arduino'ya veri gönderme
+	arduinoCS.Low() // Slave seç
+	defer arduinoCS.High() // İşlem bitiminde tekrar yüksek seviyeye getir
+
+	for _, data := range dataToSend {
+		spi.Write(data)
+		time.Sleep(10 * time.Millisecond) // Küçük bir bekleme süresi
+	}
 }
