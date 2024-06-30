@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	spiDev    = "/dev/spidev0.0"
+	spiDev    = "/dev/spidev0.1"
 	maxRetries = 3 // Maksimum tekrar denemesi
 )
 

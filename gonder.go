@@ -10,11 +10,10 @@ import (
 )
 
 const (
-	spiDev     = "/dev/spidev0.0"
-	spiSpeed   = 500000
+	spiDev     = "/dev/spidev0.1"
 	maxRetries = 3 // Maksimum tekrar denemesi
 )
-
+var spiSpeed uint32 = 500000
 func openSPI() (*os.File, error) {
 	file, err := os.OpenFile(spiDev, os.O_RDWR, 0666)
 	if err != nil {
