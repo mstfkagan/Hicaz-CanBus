@@ -1,0 +1,41 @@
+package main
+
+import (
+    "log"
+    "time"
+
+    "github.com/stianeikeland/go-rpio/v4"
+)
+
+func main() {
+    // Raspberry Pi'de SPI aygıtını aç
+    if err := rpio.Open(); err != nil {
+        log.Fatal(err)
+    }
+    defer rpio.Close()
+
+    // SPI aygıtını ve modunu seçin
+    spi := rpio.Spi0
+
+    // SPI modunu ve saat frekansını ayarla
+    if err := spi.Config(rpio.Spi0, rpio.Mode0, 1000000); err != nil { // SPI0, Mode0 (CPOL=0, CPHA=0), 1 MHz frekans
+        log.Fatal(err)
+    }
+
+    // Arduino SPI seçimi
+    var arduinoCS rpio.Pin = 10 // D10 pin
+    arduinoCS.Output()
+    arduinoCS.High() // Başlangıçta yüksek seviyede
+
+    // Gönderilecek veri
+    dataToSend := []byte{0x01, 0x02, 0x03, 0x04}
+
+    // Arduino'ya veri gönderme
+    arduinoCS.Low() // Slave seç
+    defer arduinoCS.High() // İşlem bitiminde tekrar yüksek seviyeye getir
+
+    for _, data := range dataToSend {
+        spi.Transfer(uint8(data))
+        time.Sleep(10 * time.Millisecond) // Küçük bir bekleme süresi
+    }
+}
