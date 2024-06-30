@@ -1,0 +1,107 @@
+package main
+
+import (
+	"fmt"
+	"hash/crc32"
+	"math/rand"
+	"os"
+	"time"
+	"unsafe"
+	"syscall"
+)
+
+const (
+	spiDev    = "/dev/spidev0.0"
+	maxRetries = 3 // Maksimum tekrar denemesi
+)
+
+var spiSpeed uint32 = 500000 // SPI hızını uint32 olarak tanımla
+
+func openSPI() (*os.File, error) {
+	// SPI cihaz dosyasını okuma-yazma modunda aç
+	file, err := os.OpenFile(spiDev, os.O_RDWR, 0666)
+	if err != nil {
+		return nil, err
+	}
+
+	// SPI hızını ayarla
+	if err := ioctl(file.Fd(), 0x40046b04, uintptr(unsafe.Pointer(&spiSpeed))); err != nil {
+		file.Close()
+		return nil, err
+	}
+
+	return file, nil
+}
+
+func ioctl(fd, cmd, arg uintptr) error {
+	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, fd, cmd, arg); err != 0 {
+		return err
+	}
+	return nil
+}
+
+func readSPI(file *os.File, data []byte) error {
+	if _, err := file.Write(data); err != nil {
+		return err
+	}
+	if _, err := file.Read(data); err != nil {
+		return err
+	}
+	return nil
+}
+
+func main() {
+	file, err := openSPI()
+	if err != nil {
+		fmt.Println("SPI açma hatası:", err)
+		return
+	}
+	defer file.Close()
+
+	rand.Seed(time.Now().UnixNano()) // Rastgele sayı üretimi için seed ayarı
+
+	for {
+		time.Sleep(1 * time.Second)
+
+		success := false
+
+		for retries := 0; retries < maxRetries; retries++ {
+			// Veri alma
+			data := make([]byte, 4)
+			if err := readSPI(file, data); err != nil {
+				fmt.Println("Veri alma hatası:", err)
+				continue
+			}
+
+			// CRC alma
+			crcReceived := make([]byte, 4)
+			if err := readSPI(file, crcReceived); err != nil {
+				fmt.Println("CRC alma hatası:", err)
+				continue
+			}
+
+			// Hatalı veri simülasyonu (her 5 saniyede bir)
+			if retries == 0 && time.Now().Second()%5 == 0 {
+				for i := range data {
+					data[i] = byte(rand.Intn(256)) // Rastgele veri oluştur
+				}
+				fmt.Println("Hatalı veri gönderildi:", data)
+			}
+
+			// CRC doğrulama
+			crcCalculated := crc32.ChecksumIEEE(data)
+			if crc32.ChecksumIEEE(data) != crcCalculated {
+				fmt.Println("Veri doğru değil, CRC hatalı:", data)
+				continue
+			}
+
+			fmt.Println("Veri doğru:", data)
+			success = true
+			break
+		}
+
+		if !success {
+			fmt.Println("Veri alımı başarısız oldu.")
+		}
+	}
+}
