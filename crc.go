@@ -1,15 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"encoding/binary"
 	"fmt"
 	"hash/crc32"
 	"log"
 	"os/exec"
+	"strings"
 	"time"
-
-	"github.com/brutella/can"
-	"github.com/brutella/can/pkg/adapter/socketcan"
 )
 
 // Belirli bir ID'ye sahip mesajları filtrelemek için
@@ -19,39 +18,68 @@ const targetID = 0x123
 const maxErrors = 5
 
 func main() {
-	// CAN arayüzünü aç
-	config := socketcan.NewConfig()
-	config.Name = "can0"
-	config.Bitrate = 500000
-
-	adapter, err := socketcan.New(config)
-	if err != nil {
-		log.Fatalf("CAN arayüzü açılırken hata: %v", err)
-	}
-
-	bus := can.NewBus(adapter)
-	defer bus.Disconnect()
-
 	errorCount := 0
 
-	// Mesaj alma ve doğrulama
-	bus.SubscribeFunc(func(frm can.Frame) {
-		if frm.ID == targetID {
-			if validateMessage(frm.Data) {
-				fmt.Println("Mesaj doğrulandı:", frm.Data)
+	// candump komutunu çalıştır
+	cmd := exec.Command("candump", "can0")
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Fatalf("candump komutu çalıştırılamadı: %v", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		log.Fatalf("candump komutu başlatılamadı: %v", err)
+	}
+
+	// candump çıktısını okuma
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// CAN mesajını ayrıştır
+		fields := strings.Fields(line)
+		if len(fields) < 4 {
+			log.Printf("Geçersiz CAN mesajı: %s", line)
+			errorCount++
+			if errorCount >= maxErrors {
+				log.Println("Hata limiti aşıldı, restart.go dosyası çalıştırılıyor...")
+				if err := runRestartScript(); err != nil {
+					log.Fatalf("restart.go dosyası çalıştırılamadı: %v", err)
+				}
+				errorCount = 0
+			}
+			continue
+		}
+
+		idField := fields[1]
+		dataField := fields[3]
+
+		// ID ve veri alanlarını ayrıştır
+		id, err := parseHex(idField)
+		if err != nil {
+			log.Printf("Geçersiz ID: %s", idField)
+			errorCount++
+			continue
+		}
+
+		data, err := parseHex(dataField)
+		if err != nil {
+			log.Printf("Geçersiz veri: %s", dataField)
+			errorCount++
+			continue
+		}
+
+		// Belirli bir ID'ye sahip mesajları filtrele
+		if id == targetID {
+			if validateMessage(data) {
+				fmt.Println("Mesaj doğrulandı:", data)
+				errorCount = 0
 			} else {
-				fmt.Println("Mesaj doğrulama hatası:", frm.Data)
+				fmt.Println("Mesaj doğrulama hatası:", data)
+				errorCount++
 			}
 		}
-	})
 
-	bus.ConnectAndPublish()
-
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		// Hata sayısını kontrol et
 		if errorCount >= maxErrors {
 			log.Println("Hata limiti aşıldı, restart.go dosyası çalıştırılıyor...")
 			if err := runRestartScript(); err != nil {
@@ -59,6 +87,10 @@ func main() {
 			}
 			errorCount = 0
 		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("candump çıktısı okunurken hata: %v", err)
 	}
 }
 
@@ -77,6 +109,13 @@ func validateMessage(data []byte) bool {
 	calculatedCRC := crc32.Checksum(receivedData, crc32q)
 
 	return receivedCRC == calculatedCRC
+}
+
+// Hex string'i byte dizisine dönüştüren fonksiyon
+func parseHex(hexStr string) ([]byte, error) {
+	bytes := make([]byte, len(hexStr)/2)
+	_, err := fmt.Sscanf(hexStr, "%x", &bytes)
+	return bytes, err
 }
 
 // restart.go dosyasını çalıştıran fonksiyon
