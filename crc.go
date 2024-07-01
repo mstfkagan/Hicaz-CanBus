@@ -12,7 +12,7 @@ import (
 )
 
 // Belirli bir ID'ye sahip mesajları filtrelemek için
-const targetID = "133"
+const targetID = "223"
 
 // Hata limiti
 const maxErrors = 5
@@ -53,7 +53,10 @@ func main() {
 		}
 
 		idField := fields[1] // ID alanı için indeks 1 olarak güncellendi
-		dataField := strings.Join(fields[4:], "") // Veri alanı için tüm hex verileri birleştir
+		dataFields := fields[5:] // Veri alanı için indeks 5'ten sonrasını alın
+
+		// Veri alanını birleştir
+		dataField := strings.Join(dataFields, "")
 
 		// ID ve veri alanlarını ayrıştır
 		if idField == targetID {
