@@ -78,7 +78,7 @@ func main() {
 					errorCount++
 				}
 			} else {
-				fmt.Println("Veri uzunluğu yanlış:", len(data))
+				fmt.Printf("Veri uzunluğu yanlış: %d, data: %x\n", len(data), data)
 				errorCount++
 			}
 		} else {
