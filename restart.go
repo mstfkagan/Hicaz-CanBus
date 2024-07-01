@@ -60,5 +60,20 @@ func main() {
 		} else {
 			log.Println("CAN arayüzü başarıyla yeniden başlatıldı.")
 		}
+
+		// Aynı dizindeki main.go dosyasını çalıştır
+		if err := runMainGo(); err != nil {
+			log.Printf("main.go dosyası çalıştırılamadı: %v", err)
+		} else {
+			log.Println("main.go dosyası başarıyla çalıştırıldı.")
+		}
 	}
+}
+
+// main.go dosyasını çalıştıran fonksiyon
+func runMainGo() error {
+	cmd := exec.Command("go", "run", "main.go")
+	cmd.Stdout = log.Writer()
+	cmd.Stderr = log.Writer()
+	return cmd.Run()
 }
