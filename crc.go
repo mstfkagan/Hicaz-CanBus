@@ -4,19 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
-	"strings"
 	"time"
 )
-
-// CAN arayüzünün durumunu kontrol et
-func checkCANStatus() (bool, error) {
-	cmd := exec.Command("ip", "link", "show", "can0")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return false, fmt.Errorf("CAN arayüzü durumu kontrol edilemedi: %v, output: %s", err, string(output))
-	}
-	return strings.Contains(string(output), "state UP"), nil
-}
 
 // CAN arayüzünü kapat
 func stopCAN() error {
@@ -56,31 +45,35 @@ func restartCAN() error {
 }
 
 func main() {
-	// CAN arayüzünün durumu kontrol et
-	canStatus, err := checkCANStatus()
-	if err != nil {
-		log.Fatalf("CAN arayüzü durumu kontrol edilemedi: %v", err)
-	}
-
-	if canStatus {
-		log.Println("CAN arayüzü zaten açık, işlem yapılmadı.")
-	} else {
-		log.Println("CAN arayüzü kapalı, açılıyor...")
-		if err := startCAN(); err != nil {
-			log.Fatalf("Başlangıçta CAN arayüzü başlatılamadı: %v", err)
-		}
-		log.Println("CAN arayüzü başarıyla başlatıldı.")
+	// CAN arayüzünü başlat
+	if err := startCAN(); err != nil {
+		log.Fatalf("Başlangıçta CAN arayüzü başlatılamadı: %v", err)
 	}
 
 	// CAN arayüzünü kullanarak mesaj alma döngüsü
 	for {
 		// Bu örnekte sadece bir süre bekleyip yeniden başlatma işlemini simüle ediyoruz
-		time.Sleep(0 * time.Second)
+		time.Sleep(10 * time.Second)
 		log.Println("CAN arayüzü yeniden başlatılıyor...")
 		if err := restartCAN(); err != nil {
 			log.Printf("CAN arayüzü yeniden başlatılamadı: %v", err)
 		} else {
 			log.Println("CAN arayüzü başarıyla yeniden başlatıldı.")
 		}
+
+		// Aynı dizindeki main.go dosyasını çalıştır
+		if err := runMainGo(); err != nil {
+			log.Printf("main.go dosyası çalıştırılamadı: %v", err)
+		} else {
+			log.Println("main.go dosyası başarıyla çalıştırıldı.")
+		}
 	}
+}
+
+// main.go dosyasını çalıştıran fonksiyon
+func runMainGo() error {
+	cmd := exec.Command("go", "run", "main.go")
+	cmd.Stdout = log.Writer()
+	cmd.Stderr = log.Writer()
+	return cmd.Run()
 }
