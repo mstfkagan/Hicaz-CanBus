@@ -54,12 +54,11 @@ func main() {
 		}
 
 		idField := fields[1] // ID alanı için indeks 1 olarak güncellendi
-		dataFields := fields[4:] // Veri alanı için hex verileri al
+		dataFields := fields[4:12] // Veri alanı için hex verileri al
 
 		// ID ve veri alanlarını ayrıştır
 		if idField == targetID {
 			dataString := strings.Join(dataFields, "")
-			dataString = strings.ReplaceAll(dataString, " ", "") // Boşlukları kaldır
 			data, err := hex.DecodeString(dataString)
 			if err != nil {
 				log.Printf("Geçersiz veri: %s", dataString)
