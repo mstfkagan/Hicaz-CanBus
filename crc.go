@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"hash/crc32"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 )
 
 // Belirli bir ID'ye sahip mesajları filtrelemek için
-const targetID = "223"
+const targetID = "123"
 
 // Hata limiti
 const maxErrors = 5
@@ -58,6 +59,7 @@ func main() {
 		// ID ve veri alanlarını ayrıştır
 		if idField == targetID {
 			dataString := strings.Join(dataFields, "")
+			dataString = strings.ReplaceAll(dataString, " ", "") // Boşlukları kaldır
 			data, err := hex.DecodeString(dataString)
 			if err != nil {
 				log.Printf("Geçersiz veri: %s", dataString)
@@ -125,7 +127,14 @@ func validateMessage(data []byte) bool {
 
 // restart.go dosyasını çalıştıran fonksiyon
 func runRestartScript() error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("geçerli dizin alınamadı: %v", err)
+	}
+	log.Printf("Çalışma dizini: %s", wd) // Debugging için çalışma dizinini yazdır
+
 	cmd := exec.Command("go", "run", "restart.go") // restart.go dosyasının adını belirtin
+	cmd.Dir = wd // Çalışma dizinini ayarla
 	cmd.Stdout = log.Writer()
 	cmd.Stderr = log.Writer()
 	return cmd.Run()
