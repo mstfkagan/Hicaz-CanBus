@@ -10,9 +10,9 @@ import (
 // CAN arayüzünü kapat
 func stopCAN() error {
 	cmd := exec.Command("sudo", "ifconfig", "can0", "down")
-	err := cmd.Run()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("CAN arayüzü kapatılamadı: %v", err)
+		return fmt.Errorf("CAN arayüzü kapatılamadı: %v, output: %s", err, string(output))
 	}
 	return nil
 }
@@ -20,14 +20,14 @@ func stopCAN() error {
 // CAN arayüzünü aç
 func startCAN() error {
 	cmd := exec.Command("sudo", "ip", "link", "set", "can0", "up", "type", "can", "bitrate", "500000")
-	err := cmd.Run()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("CAN arayüzü başlatılamadı: %v", err)
+		return fmt.Errorf("CAN arayüzü başlatılamadı: %v, output: %s", err, string(output))
 	}
 	cmd = exec.Command("sudo", "ifconfig", "can0", "up")
-	err = cmd.Run()
+	output, err = cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("CAN arayüzü etkinleştirilemedi: %v", err)
+		return fmt.Errorf("CAN arayüzü etkinleştirilemedi: %v, output: %s", err, string(output))
 	}
 	return nil
 }
