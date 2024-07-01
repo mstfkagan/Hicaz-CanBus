@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"hash/crc32"
 	"log"
-	"os"
 	"os/exec"
 	"strings"
 )
@@ -40,7 +39,7 @@ func main() {
 
 		// CAN mesajını ayrıştır
 		fields := strings.Fields(line)
-		if len(fields) < 5 {
+		if len(fields) < 6 {
 			log.Printf("Geçersiz CAN mesajı: %s", line)
 			errorCount++
 			if errorCount >= maxErrors {
@@ -54,13 +53,14 @@ func main() {
 		}
 
 		idField := fields[1] // ID alanı için indeks 1 olarak güncellendi
-		dataField := strings.Join(fields[5:], "") // Veri alanı için tüm hex verileri birleştir
+		dataFields := fields[4:] // Veri alanı için hex verileri al
 
 		// ID ve veri alanlarını ayrıştır
 		if idField == targetID {
-			data, err := hex.DecodeString(dataField)
+			dataString := strings.Join(dataFields, "")
+			data, err := hex.DecodeString(dataString)
 			if err != nil {
-				log.Printf("Geçersiz veri: %s", dataField)
+				log.Printf("Geçersiz veri: %s", dataString)
 				errorCount++
 				continue
 			}
@@ -125,14 +125,7 @@ func validateMessage(data []byte) bool {
 
 // restart.go dosyasını çalıştıran fonksiyon
 func runRestartScript() error {
-	wd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("geçerli dizin alınamadı: %v", err)
-	}
-	log.Printf("Çalışma dizini: %s", wd) // Debugging için çalışma dizinini yazdır
-
 	cmd := exec.Command("go", "run", "restart.go") // restart.go dosyasının adını belirtin
-	cmd.Dir = wd // Çalışma dizinini ayarla
 	cmd.Stdout = log.Writer()
 	cmd.Stderr = log.Writer()
 	return cmd.Run()
