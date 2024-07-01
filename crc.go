@@ -9,11 +9,10 @@ import (
 	"log"
 	"os/exec"
 	"strings"
-	"time"
 )
 
 // Belirli bir ID'ye sahip mesajları filtrelemek için
-const targetID = "123"
+const targetID = "133"
 
 // Hata limiti
 const maxErrors = 5
@@ -36,10 +35,11 @@ func main() {
 	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		line := scanner.Text()
+		fmt.Println("Received line:", line) // Debugging için satırı yazdır
 
 		// CAN mesajını ayrıştır
 		fields := strings.Fields(line)
-		if len(fields) < 4 {
+		if len(fields) < 5 {
 			log.Printf("Geçersiz CAN mesajı: %s", line)
 			errorCount++
 			if errorCount >= maxErrors {
@@ -52,8 +52,8 @@ func main() {
 			continue
 		}
 
-		idField := fields[1]
-		dataField := fields[3]
+		idField := fields[1] // ID alanı için indeks 1 olarak güncellendi
+		dataField := strings.Join(fields[4:], "") // Veri alanı için tüm hex verileri birleştir
 
 		// ID ve veri alanlarını ayrıştır
 		if idField == targetID {
@@ -71,6 +71,8 @@ func main() {
 				fmt.Println("Mesaj doğrulama hatası:", data)
 				errorCount++
 			}
+		} else {
+			fmt.Println("ID eşleşmedi:", idField) // Debugging için yazdır
 		}
 
 		if errorCount >= maxErrors {
