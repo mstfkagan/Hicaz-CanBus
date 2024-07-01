@@ -53,10 +53,7 @@ func main() {
 		}
 
 		idField := fields[1] // ID alanı için indeks 1 olarak güncellendi
-		dataFields := fields[5:] // Veri alanı için indeks 5'ten sonrasını alın
-
-		// Veri alanını birleştir
-		dataField := strings.Join(dataFields, "")
+		dataField := strings.Join(fields[5:], "") // Veri alanı için tüm hex verileri birleştir
 
 		// ID ve veri alanlarını ayrıştır
 		if idField == targetID {
@@ -67,12 +64,16 @@ func main() {
 				continue
 			}
 
-			if validateMessage(data) {
-				fmt.Println("Mesaj doğrulandı:", data)
-				errorCount = 0
-			} else {
-				fmt.Println("Mesaj doğrulama hatası:", data)
-				errorCount++
+			// Veri uzunluğu 8 byte olduğunda CRC ekleyin ve doğrulama yapın
+			if len(data) == 8 {
+				dataWithCRC := append(data, calculateCRC(data)...)
+				if validateMessage(dataWithCRC) {
+					fmt.Println("Mesaj doğrulandı:", data)
+					errorCount = 0
+				} else {
+					fmt.Println("Mesaj doğrulama hatası:", data)
+					errorCount++
+				}
 			}
 		} else {
 			fmt.Println("ID eşleşmedi:", idField) // Debugging için yazdır
@@ -90,6 +91,15 @@ func main() {
 	if err := scanner.Err(); err != nil {
 		log.Fatalf("candump çıktısı okunurken hata: %v", err)
 	}
+}
+
+// CRC hesaplama fonksiyonu
+func calculateCRC(data []byte) []byte {
+	crc32q := crc32.MakeTable(crc32.IEEE) // CRC-32 IEEE polinomu
+	crc := crc32.Checksum(data, crc32q)
+	crcBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(crcBytes, crc)
+	return crcBytes
 }
 
 // CRC doğrulama fonksiyonu
