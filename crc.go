@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -74,6 +75,9 @@ func main() {
 					fmt.Println("Mesaj doğrulama hatası:", data)
 					errorCount++
 				}
+			} else {
+				fmt.Println("Veri uzunluğu yanlış:", len(data))
+				errorCount++
 			}
 		} else {
 			fmt.Println("ID eşleşmedi:", idField) // Debugging için yazdır
@@ -121,7 +125,14 @@ func validateMessage(data []byte) bool {
 
 // restart.go dosyasını çalıştıran fonksiyon
 func runRestartScript() error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("geçerli dizin alınamadı: %v", err)
+	}
+	log.Printf("Çalışma dizini: %s", wd) // Debugging için çalışma dizinini yazdır
+
 	cmd := exec.Command("go", "run", "restart.go") // restart.go dosyasının adını belirtin
+	cmd.Dir = wd // Çalışma dizinini ayarla
 	cmd.Stdout = log.Writer()
 	cmd.Stderr = log.Writer()
 	return cmd.Run()
