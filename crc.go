@@ -37,7 +37,7 @@ func restartCAN() error {
 	if err := stopCAN(); err != nil {
 		return err
 	}
-	time.Sleep(2 * time.Second) // Kısa bir bekleme süresi ekleyin
+	time.Sleep(0 * time.Second) // Kısa bir bekleme süresi ekleyin
 	if err := startCAN(); err != nil {
 		return err
 	}
@@ -53,27 +53,12 @@ func main() {
 	// CAN arayüzünü kullanarak mesaj alma döngüsü
 	for {
 		// Bu örnekte sadece bir süre bekleyip yeniden başlatma işlemini simüle ediyoruz
-		time.Sleep(10 * time.Second)
+		time.Sleep(10* time.Second)
 		log.Println("CAN arayüzü yeniden başlatılıyor...")
 		if err := restartCAN(); err != nil {
 			log.Printf("CAN arayüzü yeniden başlatılamadı: %v", err)
 		} else {
 			log.Println("CAN arayüzü başarıyla yeniden başlatıldı.")
 		}
-
-		// Aynı dizindeki main.go dosyasını çalıştır
-		if err := runMainGo(); err != nil {
-			log.Printf("main.go dosyası çalıştırılamadı: %v", err)
-		} else {
-			log.Println("main.go dosyası başarıyla çalıştırıldı.")
-		}
 	}
-}
-
-// main.go dosyasını çalıştıran fonksiyon
-func runMainGo() error {
-	cmd := exec.Command("go", "run", "main.go")
-	cmd.Stdout = log.Writer()
-	cmd.Stderr = log.Writer()
-	return cmd.Run()
 }
