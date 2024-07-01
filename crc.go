@@ -8,7 +8,8 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/knieriem/gocan"
+	"github.com/brutella/can"
+	"github.com/brutella/can/pkg/adapter/socketcan"
 )
 
 // Belirli bir ID'ye sahip mesajları filtrelemek için
@@ -19,44 +20,44 @@ const maxErrors = 5
 
 func main() {
 	// CAN arayüzünü aç
-	dev := "can0"
-	s, err := gocan.NewDevSocket(dev)
+	config := socketcan.NewConfig()
+	config.Name = "can0"
+	config.Bitrate = 500000
+
+	adapter, err := socketcan.New(config)
 	if err != nil {
 		log.Fatalf("CAN arayüzü açılırken hata: %v", err)
 	}
-	defer s.Close()
+
+	bus := can.NewBus(adapter)
+	defer bus.Disconnect()
 
 	errorCount := 0
 
 	// Mesaj alma ve doğrulama
+	bus.SubscribeFunc(func(frm can.Frame) {
+		if frm.ID == targetID {
+			if validateMessage(frm.Data) {
+				fmt.Println("Mesaj doğrulandı:", frm.Data)
+			} else {
+				fmt.Println("Mesaj doğrulama hatası:", frm.Data)
+			}
+		}
+	})
+
+	bus.ConnectAndPublish()
+
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		var msg gocan.CANFrame
-		if err := s.RecvFrame(&msg); err != nil {
-			log.Printf("Mesaj alınırken hata: %v", err)
-			errorCount++
-			if errorCount >= maxErrors {
-				log.Println("Hata limiti aşıldı, restart.go dosyası çalıştırılıyor...")
-				if err := runRestartScript(); err != nil {
-					log.Fatalf("restart.go dosyası çalıştırılamadı: %v", err)
-				}
-				errorCount = 0
+		// Hata sayısını kontrol et
+		if errorCount >= maxErrors {
+			log.Println("Hata limiti aşıldı, restart.go dosyası çalıştırılıyor...")
+			if err := runRestartScript(); err != nil {
+				log.Fatalf("restart.go dosyası çalıştırılamadı: %v", err)
 			}
-			continue
-		}
-
-		// Hatalı mesajları sıfırla
-		errorCount = 0
-
-		// Belirli bir ID'ye sahip mesajları filtrele
-		if msg.ID == targetID {
-			if validateMessage(msg.Data[:]) {
-				fmt.Println("Mesaj doğrulandı:", msg.Data)
-			} else {
-				fmt.Println("Mesaj doğrulama hatası:", msg.Data)
-			}
+			errorCount = 0
 		}
 	}
 }
@@ -80,7 +81,7 @@ func validateMessage(data []byte) bool {
 
 // restart.go dosyasını çalıştıran fonksiyon
 func runRestartScript() error {
-	cmd := exec.Command("go", "run", "/path/to/restart.go") // restart.go dosyasının yolunu güncelleyin
+	cmd := exec.Command("go", "run", "restart.go") // restart.go dosyasının adını belirtin
 	cmd.Stdout = log.Writer()
 	cmd.Stderr = log.Writer()
 	return cmd.Run()
