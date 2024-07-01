@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"hash/crc32"
 	"log"
@@ -12,7 +13,7 @@ import (
 )
 
 // Belirli bir ID'ye sahip mesajları filtrelemek için
-const targetID = 0x123
+const targetID = "123"
 
 // Hata limiti
 const maxErrors = 5
@@ -55,22 +56,14 @@ func main() {
 		dataField := fields[3]
 
 		// ID ve veri alanlarını ayrıştır
-		id, err := parseHex(idField)
-		if err != nil {
-			log.Printf("Geçersiz ID: %s", idField)
-			errorCount++
-			continue
-		}
+		if idField == targetID {
+			data, err := hex.DecodeString(dataField)
+			if err != nil {
+				log.Printf("Geçersiz veri: %s", dataField)
+				errorCount++
+				continue
+			}
 
-		data, err := parseHex(dataField)
-		if err != nil {
-			log.Printf("Geçersiz veri: %s", dataField)
-			errorCount++
-			continue
-		}
-
-		// Belirli bir ID'ye sahip mesajları filtrele
-		if id == targetID {
 			if validateMessage(data) {
 				fmt.Println("Mesaj doğrulandı:", data)
 				errorCount = 0
@@ -109,13 +102,6 @@ func validateMessage(data []byte) bool {
 	calculatedCRC := crc32.Checksum(receivedData, crc32q)
 
 	return receivedCRC == calculatedCRC
-}
-
-// Hex string'i byte dizisine dönüştüren fonksiyon
-func parseHex(hexStr string) ([]byte, error) {
-	bytes := make([]byte, len(hexStr)/2)
-	_, err := fmt.Sscanf(hexStr, "%x", &bytes)
-	return bytes, err
 }
 
 // restart.go dosyasını çalıştıran fonksiyon
